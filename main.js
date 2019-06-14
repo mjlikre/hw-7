@@ -10,71 +10,52 @@ $(document).ready(function(){
     };
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    var trainId=0;
-
-
-    var trainName; 
-    var destination;
-    var trainFirst;
-    var frequency;
 
     var database = firebase.database();
-    var currentTrain;
 
-    function writeTrainData(trainId, trainName, destination, trainFirst, frequency){
-        database.ref('train/' + trainId).push({
-            trainName : trainName,
-            destination : destination,
-            trainFirst : trainFirst,
-            frequency : frequency
-        });
-        writeInput();
-
-        
-    };
-
-    function getInput(){
-        trainName = $('#train-name').val().trim();
-        destination = $('#train-destination').val().trim();
-        trainFirst = $('#train-first').val().trim();
-        frequency = $('#train-freq').val().trim();
-        if(trainName !== '' && destination !== '' && trainFirst !== '' && frequency !== '' ){
-            
-            writeTrainData(trainId, trainName, destination, trainFirst, frequency);
-            
-
-        }
-        
-        else{
-            alert("Please fill all boxes");
-        }
-
-
-    }
-
-    database.ref('train/' + trainId).on('value', function(snapshot){
-        currentTrain = snapshot.val().key();   
-    });
-
-    function writeInput(){
-        var $tr = $('<tr>')
-        var trainNameTag = $('<td>').attr('scope', 'col').text(currentTrain.trainName);
-        var trainDestination = $('<td>').attr('scope', 'col').text(currentTrain.destination);
-        var trainFrequency = $('<td>').attr('scope', 'col').text(currentTrain.frequency);
-        var trainNextArrival = $('<td>').attr('scope', 'col')
-        var trainMinutesAway = $('<td>').attr('scope', 'col')
-        $tr.append(trainNameTag, trainDestination, trainFrequency, trainNextArrival, trainMinutesAway);
-        $("#train-display").append($tr);
-        trainId++;
-
-    }
 
     $('#submit-train').on('click', function(event){
         event.preventDefault();
-        getInput()
-        $('#train-name').val('')
-        $('#train-destination').val('')
-        $('#train-first').val('')
-        $('#train-freq').val('')
+        
+        var trainName = $('#train-name').val().trim();
+        var destination = $('#train-destination').val().trim();
+        var trainFirst = moment($('#train-first').val().trim(), "HH:mm").subtract(10, 'years').format("X");
+        var frequency = $('#train-freq').val().trim();
+
+        var newTrain = {
+            name : trainName,
+            destination : destination,
+            firstTrain : trainFirst,
+            frequency : frequency
+        }
+
+        database.ref().push(newTrain)
+
+        $('#train-name').val('');
+        $('#train-destination').val('');
+        $('#train-first').val('');
+        $('#train-freq').val('');
+
+        return false;
+
     })
+
+    database.ref().on('child_added', function(snap){
+        var trainName = snap.val().name;
+        var destination = snap.val().destination;
+        var frequency = snap.val().frequency;
+        var trainFirst = snap.val().firstTrain
+        
+        var remainder = moment().diff(moment.unix(trainFirst), 'minutes')%frequency;
+        var minutes = frequency - remainder;
+        var arrival = moment().add(minutes, 'm').format('hh:mm A');
+        console.log(remainder)
+        console.log(minutes);
+        console.log(arrival);
+        $('#tbody').append('<tr><td>'+trainName+"</td><td>"+destination+"</td><td>"+frequency+"</td><td>"+arrival+"</td><td>"+minutes+'</td></tr>');
+    })
+
+
+    
 })
+    
